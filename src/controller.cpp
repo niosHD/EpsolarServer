@@ -11,7 +11,8 @@
 #endif
 
 #include <QCoreApplication>
-
+#include <QDir>
+#include <QFileInfo>
 #include <QWebSocket>
 
 #define LOW 1
@@ -27,17 +28,69 @@ Controller::Controller(QSettings *settings, QObject *parent) : QObject(parent),
     m_wss = new WebsocketServer(this);
     connect( m_wss, &WebsocketServer::newConnection, this, &Controller::handleConnection );
 #endif
-
-    m_db = QSqlDatabase::addDatabase(settings->value("databaseType", "QMYSQL").toString());
-    m_db.setDatabaseName(settings->value("databaseName", "epsolar").toString());
-    m_db.setHostName(settings->value("databaseHostname", "localhost").toString());
-    m_db.setUserName(settings->value("databaseUsername", "root").toString());
-    m_db.setPassword(settings->value("databasePassword", "").toString());
-    if( !m_db.open() )
+    auto type = settings->value("databaseType", "QMYSQL").toString();
+    m_db = QSqlDatabase::addDatabase(type);
+    if (type == "QSQLITE")
     {
-        qWarning() << "Connection failed: " << m_db.lastError();
-        qApp->exit(1);
+        auto path = settings->value("databaseName", "epsolar.db").toString();
+        path = QFileInfo(QDir(qApp->applicationDirPath()), path).filePath();
+        m_db.setDatabaseName(path);
+    }
+    else
+    {
+        m_db.setDatabaseName(settings->value("databaseName", "epsolar").toString());
+        m_db.setHostName(settings->value("databaseHostname", "localhost").toString());
+        m_db.setUserName(settings->value("databaseUsername", "root").toString());
+        m_db.setPassword(settings->value("databasePassword", "").toString());
+    }
+    if (!m_db.open())
+    {
+        qWarning() << "Database connection failed: " << m_db.lastError();
+        exit(1);
         return;
+    }
+    if (type == "QSQLITE")
+    {
+        // Simplified database schema based on the tables and content from the mysql schema.
+        // Sqlite does not really support the specified data types but at least it accepts them.
+        QSqlQuery query(m_db);
+        query.exec("CREATE TABLE IF NOT EXISTS fiveMinute ("
+                   "id int(11) PRIMARY KEY, register int(11) DEFAULT NULL, "
+                   "min decimal(8,2) DEFAULT NULL, max decimal(8,2) DEFAULT NULL, "
+                   "average decimal(8,2) DEFAULT NULL, tstart datetime DEFAULT NULL, "
+                   "tend datetime DEFAULT NULL)");
+        query.exec("CREATE TABLE IF NOT EXISTS hourly ("
+                   "id int(11) PRIMARY KEY, register int(11) DEFAULT NULL, "
+                   "min decimal(8,2) DEFAULT NULL, max decimal(8,2) DEFAULT NULL, "
+                   "average decimal(8,2) DEFAULT NULL, tstart datetime DEFAULT NULL, "
+                   "tend datetime DEFAULT NULL)");
+        query.exec("CREATE TABLE IF NOT EXISTS registers ("
+                   "id int(11) PRIMARY KEY,  register int(11) DEFAULT NULL, "
+                   "name varchar(32) DEFAULT NULL, measure varchar(8) DEFAULT NULL, "
+                   "scale double(8,3) DEFAULT NULL, multibyte TEXT DEFAULT NULL)");
+
+        query.exec("SELECT COUNT(*) from registers");
+        query.next();
+        if (query.value(0).toInt() == 0)
+            query.exec("INSERT INTO registers VALUES "
+                       "(1,12544,'Charge voltage','V',0.010,'SOLE'),"
+                       "(2,12545,'Charge current','A',0.010,'SOLE'),"
+                       "(3,12546,'Charge watts','W',0.010,'SOLE'),"
+                       "(4,12556,'Load voltage','V',0.010,'SOLE'),"
+                       "(5,12557,'Load current','A',0.010,'SOLE'),"
+                       "(6,12558,'Load watts','W',0.010,'SOLE'),"
+                       "(7,12800,'Battery status',NULL,1.000,'BITMAP'),"
+                       "(8,12801,'Charge controller status',NULL,1.000,'BITMAP'),"
+                       "(9,12570,'Battery SOC','%',1.000,'SOLE'),"
+                       "(10,12573,'Battery temperature','C',0.010,'SOLE'),"
+                       "(11,13060,'Consumed energy today','Wh',100.000,'LOW'),"
+                       "(12,13061,'Consumed energy today','Wh',100.000,'HIGH'),"
+                       "(13,13068,'Generated energy today','Wh',100.000,'LOW'),"
+                       "(14,13069,'Generated energy today','Wh',100.000,'HIGH'),"
+                       "(15,13074,'Generated energy total','KWh',0.010,'LOW'),"
+                       "(16,13075,'Generated energy total','KWh',0.010,'HIGH'),"
+                       "(17,13076,'CO2 reduction','Kg',100.000,'LOW'),"
+                       "(18,13077,'CO2 reduction','Kg',100.000,'HIGH')");
     }
 
     m_lastAverage = QDateTime::currentDateTime();
@@ -47,6 +100,7 @@ Controller::Controller(QSettings *settings, QObject *parent) : QObject(parent),
     if( !m_epsolar->open(devPath, 115200, 8, "N", 1) )
     {
         qDebug() << "Failed to open " << devPath << m_epsolar->errorString();
+        exit(1);
         return;
     }
     connect( m_epsolar, &Epsolar::registerResult, this, &Controller::registerReceived );
