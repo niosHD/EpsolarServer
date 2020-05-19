@@ -1,3 +1,10 @@
+isEmpty(ETCDIR):ETCDIR = /etc
+isEmpty(PREFIX):PREFIX = /usr/local
+isEmpty(BINDIR):BINDIR = $${PREFIX}/bin
+isEmpty(LIBDIR):LIBDIR = $${PREFIX}/lib
+isEmpty(INCLUDEDIR):INCLUDEDIR = $${PREFIX}/include
+isEmpty(DATADIR):DATADIR = $${PREFIX}/share/epsolar
+
 # --------
 # Options:
 # --------
@@ -12,7 +19,7 @@ CONFIG += http
 CONFIG += websocket
 
 # 4. Path to configuration file:
-DEFINES += SETTINGS=\"\\\"/etc/epsolarServer.conf\\\"\"
+DEFINES += SETTINGS=\"\\\"$$ETCDIR/epsolarServer.conf\\\"\"
 
 # --------
 
@@ -51,10 +58,12 @@ HEADERS += \
     src/gzip.h
 
 http {
+    INCLUDEPATH += $$INCLUDEDIR
     DEFINES += HTTP
     SOURCES += src/resourceserver.cpp
     HEADERS += src/resourceserver.h
-    LIBS += -lqhttpserver
+    QMAKE_RPATHDIR += $$LIBDIR
+    LIBS += -L$$LIBDIR -lqhttpserver
     RESOURCES += www/resources.qrc
 }
 
@@ -72,3 +81,10 @@ libmodbus {
 } else {
     QT += serialbus serialport
 }
+
+target.path = $$BINDIR
+config.path = $$ETCDIR
+config.files += dist/epsolarServer.conf
+data.path = $$DATADIR
+data.files += dist/epsolar.init dist/mysql_schema.sql
+INSTALLS += target config data

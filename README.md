@@ -26,6 +26,12 @@ To set build options, see the top options in "EpsolarServer.pro".
 
 Build by running "qmake", then "make".
 
+Installation into specific directories (`BINDIR`, `DATADIR`, `ETCDIR`, `INCLUDEDIR`, `LIBDIR`) is supported by specifying them during the qmake invocation. `PREFIX` can be used to re-root the whole installation except for the `ETCDIR`. Building and installing to `/opt/epever` works, for example, with the following commands:
+```shell
+$ qmake -r PREFIX=/opt/epever -r ETCDIR=/opt/epever/etc
+$ make install
+```
+
 ## Setup
 
 To setup the database, import the schema using "mysql -uroot < dist/mysql_schema.sql"

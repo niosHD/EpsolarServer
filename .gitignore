@@ -1,0 +1,8 @@
+# ignore generated files
+.qmake.stash
+*.o
+EpsolarServer
+Makefile
+moc_*.cpp
+moc_*.h
+qrc_resources.cpp
