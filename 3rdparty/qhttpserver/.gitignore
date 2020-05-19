@@ -1,0 +1,12 @@
+# ignore artifacts
+build/
+examples/bodydata/bodydata
+examples/greeting/greeting
+examples/helloworld/helloworld
+lib/libqhttpserver.so*
+
+# ignore generated files
+Makefile
+moc_*.h
+moc_*.cpp
+*.o

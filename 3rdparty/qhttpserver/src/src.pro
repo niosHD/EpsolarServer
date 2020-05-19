@@ -26,10 +26,9 @@ INCLUDEPATH += $$QHTTPSERVER_BASE/http-parser
 
 PRIVATE_HEADERS += $$QHTTPSERVER_BASE/http-parser/http_parser.h qhttpconnection.h
 
-PUBLIC_HEADERS += qhttpserver.h qhttprequest.h qhttpresponse.h qhttpserverapi.h qhttpserverfwd.h
+PUBLIC_HEADERS += qhttpserver.h qhttprequest.h qhttpresponse.h qhttpserverapi.h qhttpserverfwd.h safequeue.h
 
-HEADERS = $$PRIVATE_HEADERS $$PUBLIC_HEADERS \
-    safequeue.h
+HEADERS = $$PRIVATE_HEADERS $$PUBLIC_HEADERS
 SOURCES = $$QHTTPSERVER_BASE/http-parser/http_parser.c \
     qhttpconnection.cpp \
     qhttprequest.cpp \
